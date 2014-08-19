@@ -72,7 +72,7 @@ LIBS=$(OPENGLLIB) $(GLEWLIB) $(GLFWLIB) -lX11 -lXxf86vm -lXrandr -lXi -lpthread
 # LIBS=$(OPENGLLIB) $(GLEWLIB) $(GLFWLIB)
 
 # Compiler and Linker flags
-CPPFLAGS = -std=c++11 -O3 -Wno-pragmas
+CPPFLAGS = -std=c++11 -O3 -Wno-pragmas -fpermissive
 # CPPFLAGS = -std=c++11 -O3 -Wall
 # LDFLAGS  = -L$(GL_ROOT)/lib
 LDFLAGS=-L/usr/local/lib

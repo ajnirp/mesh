@@ -53,6 +53,16 @@ int windowWidth = 640;
 int windowHeight = 480;
 // bool quit_program = false;
 
+namespace Visualization {
+    enum drawMode {
+        WIREFRAME = 0,
+        POINTS = 1,
+        SOLID = 2
+    };
+
+    drawMode mode;
+}
+
 
 // returns the full path to the file `fileName` in the resources directory of the app bundle
 static std::string ResourcePath(std::string fileName) {
@@ -74,7 +84,8 @@ static void LoadShaders() {
     gProgram->setUniform("projection", projection);
 
     //set the "camera" uniform in the vertex shader, because it's also not going to change
-    glm::mat4 camera = glm::lookAt(glm::vec3(10,8,10), glm::vec3(0,0,0), glm::vec3(0,1,0));
+    glm::mat4 camera = glm::lookAt(glm::vec3(10,8,10), glm::vec3(0,0,0), glm::vec3(0,1,0)); // L
+    // glm::mat4 camera = glm::lookAt(glm::vec3(0.4,0.4,0.4), glm::vec3(0,0,0), glm::vec3(0,1,0)); // brain
     gProgram->setUniform("camera", camera);
 
     gProgram->stopUsing();
@@ -85,6 +96,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     //!Close the window if the ESC key was pressed
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+        Visualization::mode = (Visualization::mode + 1 ) % 3;
 }
 
 void error_callback(int error, const char* description)
@@ -141,12 +154,19 @@ static void Render(const GLuint num_points, const GLvoid* indices, const GLuint 
     gProgram->setUniform("model", glm::rotate(glm::mat4(), gDegreesRotated, glm::vec3(0,1,0)));
 
     glBindVertexArray(gVAO); // bind the VAO
-    // glDrawArrays(GL_POINTS, 0, 3*num_points); // draw the VAO
-    // glBindVertexArray(0); // unbind the VAO
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIBO);
-    // std::cout << num_indices << std::endl;
-    glDrawElements(GL_LINES, num_indices, GL_UNSIGNED_INT, 0);
-    // glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, indices);
+    if (Visualization::mode == Visualization::WIREFRAME) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIBO);
+        glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0);
+    } else if (Visualization::mode == Visualization::POINTS) {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIBO);
+        glDrawElements(GL_POINTS, num_indices, GL_UNSIGNED_INT, 0);
+    } else if (Visualization::mode == Visualization::SOLID) {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIBO);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0);
+    }
+    glBindVertexArray(0); // unbind the VAO
     gProgram->stopUsing(); // stop the program
 }
 
@@ -162,7 +182,9 @@ void Update(float secondsElapsed) {
 int main(int argc, char *argv[]) {
     // initialise mesh
     TetMesh m(0,0,0);
-    m.read_vtk_file("resources/Lref.vtk");
+    // m.read_vtk_file("resources/Lref.vtk");
+    // m.read_vtk_file("resources/brain.1.vtk");
+    m.read_vtk_file(std::string(argv[1]));
 
     GLFWwindow* window;
     glfwSetErrorCallback(error_callback);
@@ -192,8 +214,6 @@ int main(int argc, char *argv[]) {
 
     // load vertex and fragment shaders into opengl
     LoadShaders();
-
-    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
     // create buffer and fill it with the points of the triangle
     const double* points = m.get_points();
